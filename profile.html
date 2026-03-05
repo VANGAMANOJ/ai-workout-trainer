@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FitAI – Profile & Nutrition</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"/>
+</head>
+<body class="profile-pg">
+
+<nav class="navbar">
+  <div class="nav-brand">
+    <span class="brand-icon">⚡</span><span class="brand-name">FitAI</span>
+  </div>
+  <div class="nav-tabs">
+    <a href="/?tab=trainer"   class="nav-tab">🎯 Live Trainer</a>
+    <a href="/?tab=dailyplan" class="nav-tab">📋 Daily Plan</a>
+    <a href="/?tab=dashboard" class="nav-tab">📊 Dashboard</a>
+    <a href="/profile"        class="nav-tab active">👤 Profile</a>
+  </div>
+  <div class="nav-status-wrap"></div>
+</nav>
+
+<div class="prof-layout">
+
+  <!-- ── FORM ── -->
+  <div class="prof-form-wrap">
+    <div class="prof-form-card">
+      <h1 class="prof-title">Your Profile</h1>
+      <p class="prof-sub">Personalize your AI fitness experience</p>
+
+      <form id="profileForm" onsubmit="saveProfile(event)">
+        <div class="fsec-title">Personal Information</div>
+        <div class="frow">
+          <div class="fgroup"><label>Full Name</label><input type="text" id="fName" placeholder="Your name" required/></div>
+          <div class="fgroup"><label>Age</label><input type="number" id="fAge" placeholder="25" min="10" max="100" required/></div>
+        </div>
+        <div class="frow">
+          <div class="fgroup"><label>Height (cm)</label><input type="number" id="fHeight" placeholder="170" min="100" max="250" required/></div>
+          <div class="fgroup"><label>Weight (kg)</label><input type="number" id="fWeight" placeholder="70" min="30" max="300" step="0.1" required/></div>
+        </div>
+        <div class="fgroup">
+          <label>Gender</label>
+          <div class="radio-row">
+            <label class="radio-opt"><input type="radio" name="gender" value="male" checked/> Male</label>
+            <label class="radio-opt"><input type="radio" name="gender" value="female"/> Female</label>
+            <label class="radio-opt"><input type="radio" name="gender" value="other"/> Other</label>
+          </div>
+        </div>
+
+        <div class="fsec-title">Fitness Goal</div>
+        <div class="goal-grid">
+          <div class="goal-card active" data-goal="weight_loss"       onclick="pickGoal(this)"><span class="gc-icon">🔥</span><span class="gc-name">Weight Loss</span><span class="gc-desc">Burn fat, cardio focus</span></div>
+          <div class="goal-card"        data-goal="muscle_gain"       onclick="pickGoal(this)"><span class="gc-icon">💪</span><span class="gc-name">Muscle Gain</span><span class="gc-desc">Build strength & size</span></div>
+          <div class="goal-card"        data-goal="body_recomposition" onclick="pickGoal(this)"><span class="gc-icon">⚖️</span><span class="gc-name">Body Recomp</span><span class="gc-desc">Lose fat, gain muscle</span></div>
+          <div class="goal-card"        data-goal="general_fitness"   onclick="pickGoal(this)"><span class="gc-icon">🏃</span><span class="gc-name">General Fitness</span><span class="gc-desc">Stay fit & healthy</span></div>
+        </div>
+        <input type="hidden" id="fGoal" value="weight_loss"/>
+
+        <button type="submit" class="btn-submit" id="saveBtn">Save & Generate Plan ✨</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── RESULTS ── -->
+  <div class="prof-results" id="profResults" style="display:none">
+
+    <!-- Protein + PDF button -->
+    <div class="res-card">
+      <div class="rc-hdr">
+        <span class="rc-icon">🥩</span>
+        <div><div class="rc-title">Daily Protein Target</div><div class="rc-sub" id="goalLabel">—</div></div>
+        <button class="pdf-btn" id="pdfBtn" onclick="downloadPDF()">⬇ Download PDF</button>
+      </div>
+      <div class="prot-range" id="protRange">—</div>
+      <div class="prot-note-sm">Based on 1.6 – 2.2 g per kg body weight</div>
+      <div class="prot-bar-wrap"><div class="prot-bar-fill" id="protFill" style="width:65%"></div></div>
+    </div>
+
+    <!-- Meal plan -->
+    <div class="res-card">
+      <div class="rc-hdr"><span class="rc-icon">🍽️</span><div class="rc-title">Daily Meal Plan</div></div>
+      <div id="mealList"></div>
+    </div>
+
+    <!-- Today's workout plan from profile -->
+    <div class="res-card">
+      <div class="rc-hdr"><span class="rc-icon">🏋️</span><div class="rc-title">Your Daily Workout Plan</div></div>
+      <div id="workoutPlanList"></div>
+    </div>
+
+    <!-- Exercise recommendations -->
+    <div class="res-card">
+      <div class="rc-hdr"><span class="rc-icon">⭐</span><div class="rc-title">Recommended Exercises</div></div>
+      <div class="chips" id="recChips"></div>
+    </div>
+
+    <!-- Protein foods -->
+    <div class="res-card">
+      <div class="rc-hdr"><span class="rc-icon">🥗</span><div class="rc-title">Best Protein Foods</div></div>
+      <div class="food-grid" id="foodGrid"></div>
+    </div>
+
+    <!-- Workout history -->
+    <div class="res-card">
+      <div class="rc-hdr"><span class="rc-icon">📈</span><div class="rc-title">Workout Progress & History</div></div>
+      <div id="histContent"><div class="no-hist">Complete workouts in the Live Trainer to see history here.</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const FOOD_EMOJIS = {
+  'Chicken Breast':'🍗','Chicken breast':'🍗','Fish':'🐟','Eggs':'🥚',
+  'Egg whites':'🥚','Oats':'🌾','Greek Yogurt':'🥛','Paneer':'🧀',
+  'Milk':'🥛','Peanut Butter':'🥜','Tofu':'🫘','Lentils':'🫘','Vegetables':'🥦',
+};
+let currentProfile = null;
+let selectedGoal   = 'weight_loss';
+
+function pickGoal(el) {
+  document.querySelectorAll('.goal-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  selectedGoal = el.dataset.goal;
+  document.getElementById('fGoal').value = selectedGoal;
+}
+
+async function saveProfile(e) {
+  e.preventDefault();
+  currentProfile = {
+    name:         document.getElementById('fName').value,
+    age:          document.getElementById('fAge').value,
+    height:       document.getElementById('fHeight').value,
+    weight:       document.getElementById('fWeight').value,
+    gender:       document.querySelector('input[name="gender"]:checked').value,
+    fitness_goal: selectedGoal,
+  };
+  const btn = document.getElementById('saveBtn');
+  btn.textContent = 'Saving…'; btn.disabled = true;
+  try {
+    const res  = await fetch('/api/save_profile', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(currentProfile),
+    });
+    const d = await res.json();
+    renderResults(d.diet, d.recommendations, d.plan);
+    btn.textContent = '✅ Saved!';
+    setTimeout(() => { btn.textContent = 'Save & Generate Plan ✨'; btn.disabled = false; }, 2500);
+  } catch(err) {
+    btn.textContent = 'Save & Generate Plan ✨'; btn.disabled = false;
+    alert('Error: ' + err.message);
+  }
+}
+
+function renderResults(diet, recommendations, plan) {
+  document.getElementById('profResults').style.display = 'flex';
+  document.getElementById('goalLabel').textContent = diet.goal;
+  document.getElementById('protRange').textContent = diet.protein_range;
+
+  // Meal plan
+  const m = diet.meals;
+  document.getElementById('mealList').innerHTML = [
+    ['🌅 Breakfast', m.breakfast],['☀️ Lunch', m.lunch],
+    ['🍎 Snack', m.snack],['🌙 Dinner', m.dinner],['🌛 Before Bed', m.pre_bed],
+  ].map(([t,c]) => `<div class="meal-row"><span class="meal-time">${t}</span><span class="meal-cont">${c}</span></div>`).join('');
+
+  // Daily workout plan
+  if (plan) {
+    const wHTML = plan.workout.map(ex => `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--surface2);border-radius:8px;margin-bottom:6px">
+        <span style="font-size:18px">💪</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700">${ex.name}</div>
+          <div style="font-size:11.5px;color:var(--text3)">${ex.sets} sets × ${ex.reps} · Rest ${ex.rest||'30s'}</div>
+        </div>
+      </div>`).join('');
+    document.getElementById('workoutPlanList').innerHTML =
+      `<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Warm-up → Workout → Cool Down</div>` + wHTML;
+  }
+
+  // Chips
+  document.getElementById('recChips').innerHTML = recommendations.map(r =>
+    `<span class="chip">${r}</span>`).join('');
+
+  // Foods
+  document.getElementById('foodGrid').innerHTML = m.foods.map(f =>
+    `<div class="food-pill">${FOOD_EMOJIS[f]||'🥗'} ${f}</div>`).join('');
+
+  loadHistory();
+}
+
+async function loadHistory() {
+  try {
+    const res = await fetch('/api/workout_history');
+    const d   = await res.json();
+    if (!d.history.length) return;
+    document.getElementById('histContent').innerHTML = d.history.map(h => {
+      const ex  = h.exercise.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+      const col = h.accuracy>75?'#00c87a':h.accuracy>40?'#ff9500':'#ff3b5c';
+      return `<div class="hist-item">
+        <div class="hi-name">${ex}</div>
+        <div class="hi-row">
+          <span>${h.reps} reps</span>
+          <span style="color:${col};font-weight:700">${h.accuracy}% accuracy</span>
+        </div>
+        ${h.mistakes.length?`<div class="hi-mistakes">${h.mistakes.join(' · ')}</div>`:''}
+      </div>`;
+    }).join('');
+  } catch(e) {}
+}
+
+async function downloadPDF() {
+  if (!currentProfile) { alert('Please save your profile first.'); return; }
+  const btn = document.getElementById('pdfBtn');
+  btn.textContent = '⏳ Generating…'; btn.disabled = true;
+  try {
+    const res = await fetch('/api/download_nutrition_pdf', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(currentProfile),
+    });
+    if (!res.ok) { const e=await res.json(); throw new Error(e.error||'Server error'); }
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = `FitAI_Plan_${currentProfile.name||'User'}.pdf`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    btn.textContent = '✅ Downloaded!';
+    setTimeout(() => { btn.textContent = '⬇ Download PDF'; btn.disabled = false; }, 2500);
+  } catch(err) {
+    btn.textContent = '⬇ Download PDF'; btn.disabled = false;
+    alert('PDF error: ' + err.message);
+  }
+}
+
+// Auto-load saved profile
+(async function() {
+  try {
+    const res = await fetch('/api/get_profile');
+    const d   = await res.json();
+    if (d.profile) {
+      const p = d.profile;
+      currentProfile = p;
+      document.getElementById('fName').value   = p.name   || '';
+      document.getElementById('fAge').value    = p.age    || '';
+      document.getElementById('fHeight').value = p.height || '';
+      document.getElementById('fWeight').value = p.weight || '';
+      if (p.gender) {
+        const r = document.querySelector(`input[name="gender"][value="${p.gender}"]`);
+        if (r) r.checked = true;
+      }
+      if (p.fitness_goal) {
+        const gc = document.querySelector(`.goal-card[data-goal="${p.fitness_goal}"]`);
+        if (gc) pickGoal(gc);
+      }
+      renderResults(d.diet, d.recommendations, d.plan);
+    }
+    loadHistory();
+  } catch(e) {}
+
+  // Handle tab deep-links from home page nav
+  const url  = new URL(window.location.href);
+  const tab  = url.searchParams.get('tab');
+  if (tab) {
+    const btn = document.querySelector(`[data-tab="${tab}"]`);
+    if (btn) switchTab(tab, btn);
+  }
+})();
+</script>
+</body>
+</html>

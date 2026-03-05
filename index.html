@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FitAI – AI Personal Trainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"/>
+</head>
+<body>
+
+<!-- ═══════════════════════════ NAVBAR ═══════════════════════════ -->
+<nav class="navbar">
+  <div class="nav-brand">
+    <span class="brand-icon">⚡</span>
+    <span class="brand-name">FitAI</span>
+  </div>
+
+  <!-- Primary navigation tabs -->
+  <div class="nav-tabs">
+    <button class="nav-tab active" data-tab="trainer" onclick="switchTab('trainer',this)">
+      🎯 Live Trainer
+    </button>
+    <button class="nav-tab" data-tab="dailyplan" onclick="switchTab('dailyplan',this)">
+      📋 Daily Plan
+    </button>
+    <button class="nav-tab" data-tab="dashboard" onclick="switchTab('dashboard',this)">
+      📊 Dashboard
+    </button>
+    <a href="/profile" class="nav-tab nav-tab-profile">
+      👤 Profile
+    </a>
+  </div>
+
+  <div class="nav-status-wrap">
+    <span class="nav-status-pill" id="statusPill">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">Ready</span>
+    </span>
+  </div>
+</nav>
+
+<!-- ═══════════════════════ TAB: LIVE TRAINER ══════════════════════ -->
+<div class="tab-content active" id="tab-trainer">
+  <div class="app-layout">
+
+    <!-- LEFT PANEL: Exercise list -->
+    <aside class="panel panel-left">
+      <div class="panel-header">
+        <h2>Exercises</h2>
+        <span class="panel-sub">Tap to select</span>
+      </div>
+      <div class="exercise-list">
+        <div class="ex-item active" data-ex="squat"          onclick="selectExercise(this)"><span class="ex-icon">🏋️</span><div class="ex-info"><b>Squat</b><small>Legs · Glutes</small></div><span class="ex-rep" id="sb_squat">0</span></div>
+        <div class="ex-item"        data-ex="pushup"         onclick="selectExercise(this)"><span class="ex-icon">💪</span><div class="ex-info"><b>Push-up</b><small>Chest · Triceps</small></div><span class="ex-rep" id="sb_pushup">0</span></div>
+        <div class="ex-item"        data-ex="bicep_curl"     onclick="selectExercise(this)"><span class="ex-icon">🦾</span><div class="ex-info"><b>Bicep Curl</b><small>Biceps</small></div><span class="ex-rep" id="sb_bicep_curl">0</span></div>
+        <div class="ex-item"        data-ex="lunge"          onclick="selectExercise(this)"><span class="ex-icon">🦵</span><div class="ex-info"><b>Lunge</b><small>Quads · Hamstrings</small></div><span class="ex-rep" id="sb_lunge">0</span></div>
+        <div class="ex-item"        data-ex="shoulder_press" onclick="selectExercise(this)"><span class="ex-icon">🏅</span><div class="ex-info"><b>Shoulder Press</b><small>Shoulders</small></div><span class="ex-rep" id="sb_shoulder_press">0</span></div>
+        <div class="ex-item"        data-ex="plank"          onclick="selectExercise(this)"><span class="ex-icon">🧘</span><div class="ex-info"><b>Plank</b><small>Core · Stability</small></div><span class="ex-rep" id="sb_plank">0s</span></div>
+        <div class="ex-item"        data-ex="jumping_jacks"  onclick="selectExercise(this)"><span class="ex-icon">⭐</span><div class="ex-info"><b>Jumping Jacks</b><small>Cardio · Full Body</small></div><span class="ex-rep" id="sb_jumping_jacks">0</span></div>
+        <div class="ex-item"        data-ex="high_knees"     onclick="selectExercise(this)"><span class="ex-icon">🏃</span><div class="ex-info"><b>High Knees</b><small>Cardio · Legs</small></div><span class="ex-rep" id="sb_high_knees">0</span></div>
+        <div class="ex-item"        data-ex="arm_raises"     onclick="selectExercise(this)"><span class="ex-icon">🙌</span><div class="ex-info"><b>Arm Raises</b><small>Shoulders · Upper</small></div><span class="ex-rep" id="sb_arm_raises">0</span></div>
+        <div class="ex-item"        data-ex="side_lunge"     onclick="selectExercise(this)"><span class="ex-icon">↔️</span><div class="ex-info"><b>Side Lunge</b><small>Inner Thigh · Glutes</small></div><span class="ex-rep" id="sb_side_lunge">0</span></div>
+      </div>
+
+      <div class="session-card">
+        <div class="sc-row"><span>🔥 Streak</span><b id="streakEl">1 day</b></div>
+        <div class="sc-row"><span>⏱ Session</span><b id="sessionTimer">00:00</b></div>
+        <div class="sc-row"><span>✅ Total Reps</span><b id="totalRepsEl">0</b></div>
+      </div>
+    </aside>
+
+    <!-- CENTER: Camera feed -->
+    <section class="cam-section">
+      <div class="cam-wrap">
+        <video id="webcam" autoplay muted playsinline></video>
+        <img  id="processedFrame" alt="pose" style="display:none"/>
+
+        <div class="no-cam" id="noCam">
+          <div class="nc-inner">
+            <div class="nc-icon">📷</div>
+            <p>Camera not started</p>
+            <button onclick="toggleCamera()">Enable Camera</button>
+          </div>
+        </div>
+
+        <!-- Top overlay -->
+        <div class="cam-top">
+          <span class="ex-badge" id="exBadge">SQUAT</span>
+          <div class="cam-btns">
+            <button class="cbtn" id="startBtn" onclick="toggleCamera()">▶ Start</button>
+            <button class="cbtn cbtn-danger"  onclick="resetExercise()">↺ Reset</button>
+            <button class="cbtn cbtn-voice"   id="voiceBtn" onclick="toggleVoice()">🔊 Voice</button>
+          </div>
+        </div>
+
+        <!-- Feedback strip -->
+        <div class="feedback-strip" id="feedbackStrip">
+          <span class="fb-icon" id="fbIcon">💡</span>
+          <span id="fbText">Select an exercise and press Start</span>
+        </div>
+
+        <!-- Bottom accuracy bar -->
+        <div class="cam-acc-bar">
+          <span class="cab-label">FORM</span>
+          <div class="cab-track"><div class="cab-fill" id="cabFill" style="width:0%"></div></div>
+          <span class="cab-pct" id="cabPct">—</span>
+        </div>
+      </div>
+      <div class="instr-strip" id="instrStrip">
+        Stand 1.5–2m from camera · Full body visible · Good lighting · Space=Start · R=Reset
+      </div>
+    </section>
+
+    <!-- RIGHT PANEL: Stats Dashboard -->
+    <aside class="panel panel-right">
+      <div class="panel-header">
+        <h2>Live Stats</h2>
+        <span class="panel-sub" id="dashEx">Squat</span>
+      </div>
+
+      <!-- Hero rep counter -->
+      <div class="rep-hero">
+        <div class="rep-num" id="repNum">0</div>
+        <div class="rep-lbl" id="repLbl">REPS</div>
+      </div>
+
+      <!-- Stats grid -->
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-val" id="sAngle">—°</div>
+          <div class="stat-lbl">Joint Angle</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val green" id="sCorrect">0</div>
+          <div class="stat-lbl">✅ Correct</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val red" id="sWrong">0</div>
+          <div class="stat-lbl">⚠️ Fix Form</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val form-tag" id="sForm">—</div>
+          <div class="stat-lbl">Form Status</div>
+        </div>
+      </div>
+
+      <!-- Accuracy bar -->
+      <div class="acc-section">
+        <div class="acc-row">
+          <span class="acc-label">Form Accuracy</span>
+          <span class="acc-pct" id="accPct">0%</span>
+        </div>
+        <div class="acc-track">
+          <div class="acc-fill" id="accFill" style="width:0%"></div>
+        </div>
+      </div>
+
+      <!-- Live corrections -->
+      <div class="corrections-section">
+        <div class="corr-hdr">⚠️ Live Corrections</div>
+        <div id="corrList"><div class="no-corr">Great form so far – keep going!</div></div>
+      </div>
+
+      <!-- Rest timer -->
+      <div class="rest-section" id="restSection" style="display:none">
+        <div class="rest-lbl">REST</div>
+        <div class="rest-num" id="restNum">30</div>
+        <button class="skip-btn" onclick="skipRest()">Skip →</button>
+      </div>
+
+      <!-- Quick actions -->
+      <div class="dash-actions">
+        <button class="da-btn" onclick="showSummaryModal()">📊 Set Summary</button>
+        <button class="da-btn" onclick="startRest(30)">⏸ Rest 30s</button>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- ═══════════════════════ TAB: DAILY PLAN ════════════════════════ -->
+<div class="tab-content" id="tab-dailyplan">
+  <div class="plan-page">
+
+    <!-- No profile notice -->
+    <div class="plan-no-profile" id="planNoProfile">
+      <div class="pnp-icon">📋</div>
+      <h2>No Profile Found</h2>
+      <p>Set up your profile to get a personalized daily workout and nutrition plan.</p>
+      <a href="/profile" class="btn-primary" style="margin-top:16px;display:inline-block">Set Up Profile →</a>
+    </div>
+
+    <!-- Plan content (shown when profile exists) -->
+    <div class="plan-content" id="planContent" style="display:none">
+
+      <!-- Plan header -->
+      <div class="plan-header-card" id="planHeaderCard">
+        <div class="phc-left">
+          <div class="phc-greeting" id="phcGreeting">Good morning!</div>
+          <div class="phc-name"     id="phcName">Today's Plan</div>
+          <div class="phc-goal"     id="phcGoal">Weight Loss Plan</div>
+        </div>
+        <div class="phc-right">
+          <div class="phc-stat"><span id="phcExCount">5</span><small>Exercises</small></div>
+          <div class="phc-stat"><span id="phcTotalSets">14</span><small>Total Sets</small></div>
+          <div class="phc-stat"><span id="phcDuration">~35 min</span><small>Duration</small></div>
+        </div>
+      </div>
+
+      <div class="plan-body">
+        <!-- Left: Workout plan -->
+        <div class="plan-col">
+
+          <!-- Warmup -->
+          <div class="plan-section-card">
+            <div class="psc-header warmup-hdr">
+              <span>🔥</span> Warm-Up
+            </div>
+            <div id="warmupList" class="plan-ex-list"></div>
+          </div>
+
+          <!-- Main workout -->
+          <div class="plan-section-card">
+            <div class="psc-header workout-hdr">
+              <span>💪</span> Main Workout
+            </div>
+            <div id="workoutList" class="plan-ex-list"></div>
+          </div>
+
+          <!-- Cooldown -->
+          <div class="plan-section-card">
+            <div class="psc-header cooldown-hdr">
+              <span>🧘</span> Cool Down
+            </div>
+            <div id="cooldownList" class="plan-ex-list"></div>
+          </div>
+        </div>
+
+        <!-- Right: Nutrition -->
+        <div class="plan-col">
+
+          <!-- Protein target -->
+          <div class="plan-section-card">
+            <div class="psc-header nutrition-hdr">
+              <span>🥩</span> Daily Protein Target
+            </div>
+            <div class="protein-display">
+              <div class="prot-big" id="planProtRange">—</div>
+              <div class="prot-note" id="planProtNote">per day based on your weight</div>
+            </div>
+            <div class="prot-bar-wrap"><div class="prot-bar-fill" style="width:65%"></div></div>
+          </div>
+
+          <!-- Meal plan -->
+          <div class="plan-section-card">
+            <div class="psc-header meal-hdr">
+              <span>🍽️</span> Today's Meal Plan
+            </div>
+            <div id="planMealList" class="meal-plan-list"></div>
+          </div>
+
+          <!-- High-protein foods -->
+          <div class="plan-section-card">
+            <div class="psc-header food-hdr">
+              <span>🥗</span> Best Protein Foods
+            </div>
+            <div id="planFoodGrid" class="food-grid"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ TAB: DASHBOARD ════════════════════════ -->
+<div class="tab-content" id="tab-dashboard">
+  <div class="dashboard-page">
+
+    <!-- Hero stats row -->
+    <div class="dash-hero-row">
+      <div class="dhr-card">
+        <div class="dhr-icon">🏋️</div>
+        <div class="dhr-val" id="dashWorkouts">0</div>
+        <div class="dhr-lbl">Workouts Completed</div>
+      </div>
+      <div class="dhr-card">
+        <div class="dhr-icon">🔢</div>
+        <div class="dhr-val" id="dashTotalReps">0</div>
+        <div class="dhr-lbl">Total Reps</div>
+      </div>
+      <div class="dhr-card">
+        <div class="dhr-icon">🎯</div>
+        <div class="dhr-val" id="dashAccuracy">0%</div>
+        <div class="dhr-lbl">Avg Form Accuracy</div>
+      </div>
+      <div class="dhr-card">
+        <div class="dhr-icon">🔥</div>
+        <div class="dhr-val" id="dashStreak">1</div>
+        <div class="dhr-lbl">Day Streak</div>
+      </div>
+    </div>
+
+    <div class="dash-body">
+      <!-- Left: Exercise breakdown -->
+      <div class="dash-card">
+        <h3 class="dash-card-title">📈 Exercise Progress</h3>
+        <div id="dashExerciseList">
+          <div class="dash-empty">Start exercising in the Live Trainer to see your progress here.</div>
+        </div>
+      </div>
+
+      <!-- Right: Session timeline + profile summary -->
+      <div class="dash-right-col">
+        <div class="dash-card">
+          <h3 class="dash-card-title">⏱ Session Timeline</h3>
+          <div class="timeline" id="dashTimeline">
+            <div class="dash-empty">No activity yet this session.</div>
+          </div>
+        </div>
+
+        <div class="dash-card" id="dashProfileCard" style="display:none">
+          <h3 class="dash-card-title">👤 Profile Summary</h3>
+          <div id="dashProfileSummary"></div>
+        </div>
+
+        <div class="dash-card">
+          <h3 class="dash-card-title">🏆 Achievements</h3>
+          <div id="dashAchievements" class="achievements-grid">
+            <div class="ach-badge locked" id="ach-10">🔟<span>10 Reps</span></div>
+            <div class="ach-badge locked" id="ach-50">5️⃣0️⃣<span>50 Reps</span></div>
+            <div class="ach-badge locked" id="ach-100">💯<span>100 Reps</span></div>
+            <div class="ach-badge locked" id="ach-streak">🔥<span>3-Day Streak</span></div>
+            <div class="ach-badge locked" id="ach-acc">🎯<span>80% Accuracy</span></div>
+            <div class="ach-badge locked" id="ach-plank">🧘<span>30s Plank</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ SUMMARY MODAL ══════════════════ -->
+<div class="modal-bg" id="summaryModal" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal-card">
+    <div class="modal-hdr">
+      <h3>Workout Summary</h3>
+      <button class="modal-x" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modalBody" class="modal-body">Loading…</div>
+    <div class="modal-ftr">
+      <button class="btn-primary" onclick="closeModal()">Continue Training</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ INJURY TOAST ═══════════════════ -->
+<div class="injury-toast" id="injuryToast" style="display:none">
+  <span>🚨</span>
+  <span id="injuryMsg">Alert</span>
+  <button onclick="this.parentElement.style.display='none'">✕</button>
+</div>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
