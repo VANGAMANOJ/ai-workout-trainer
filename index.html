@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Workout Trainer</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #161923;
+    --surface2: #1e2330;
+    --border: rgba(255,255,255,0.07);
+    --accent: #e8ff47;
+    --accent2: #ff6b35;
+    --text: #f0f2f7;
+    --muted: #7a8097;
+    --card-radius: 18px;
+    --shadow: 0 8px 40px rgba(0,0,0,0.5);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    padding: 0 0 80px;
+  }
+
+  /* ── HERO HEADER ── */
+  .hero {
+    position: relative;
+    padding: 64px 24px 48px;
+    text-align: center;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(232,255,71,0.13) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-eyebrow {
+    display: inline-block;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: rgba(232,255,71,0.1);
+    border: 1px solid rgba(232,255,71,0.2);
+    border-radius: 100px;
+    padding: 5px 14px;
+    margin-bottom: 20px;
+  }
+  .hero h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(56px, 10vw, 110px);
+    line-height: 0.92;
+    letter-spacing: 0.02em;
+    color: var(--text);
+  }
+  .hero h1 span { color: var(--accent); }
+  .hero-sub {
+    margin-top: 18px;
+    color: var(--muted);
+    font-size: 15px;
+    font-weight: 400;
+    max-width: 420px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* ── CONTAINER ── */
+  .container {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+
+  /* ── CONTROL PANEL ── */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    padding: 28px 28px 24px;
+    box-shadow: var(--shadow);
+    margin-bottom: 40px;
+  }
+  .panel-title {
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 20px;
+  }
+  .inputs-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 14px;
+    align-items: end;
+  }
+  .field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    margin-bottom: 8px;
+    letter-spacing: 0.05em;
+  }
+  .field select {
+    width: 100%;
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a8097' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .field select:focus { outline: none; border-color: var(--accent); }
+
+  .btn-generate {
+    background: var(--accent);
+    color: #0d0f14;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 28px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    letter-spacing: 0.03em;
+    transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+    box-shadow: 0 4px 24px rgba(232,255,71,0.25);
+  }
+  .btn-generate:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(232,255,71,0.38);
+  }
+  .btn-generate:active { transform: translateY(0); }
+
+  /* ── WORKOUT GRID ── */
+  #workout-output { display: none; }
+  #workout-output.visible { display: block; }
+
+  .section-label {
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 20px;
+  }
+
+  .days-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  /* ── DAY CARD ── */
+  .day-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    transition: transform 0.2s, box-shadow 0.2s;
+    animation: fadeUp 0.4s ease both;
+  }
+  .day-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 16px 50px rgba(0,0,0,0.55);
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .day-card:nth-child(1) { animation-delay: 0.05s; }
+  .day-card:nth-child(2) { animation-delay: 0.10s; }
+  .day-card:nth-child(3) { animation-delay: 0.15s; }
+  .day-card:nth-child(4) { animation-delay: 0.20s; }
+  .day-card:nth-child(5) { animation-delay: 0.25s; }
+  .day-card:nth-child(6) { animation-delay: 0.30s; }
+  .day-card:nth-child(7) { animation-delay: 0.35s; }
+
+  .card-header {
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .day-badge {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .card-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 0.04em;
+    line-height: 1;
+  }
+  .muscle-tag {
+    margin-left: auto;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: rgba(232,255,71,0.1);
+    border: 1px solid rgba(232,255,71,0.18);
+    border-radius: 100px;
+    padding: 3px 9px;
+    white-space: nowrap;
+  }
+  .muscle-tag.rest {
+    color: var(--muted);
+    background: rgba(122,128,151,0.1);
+    border-color: rgba(122,128,151,0.2);
+  }
+
+  .card-body { padding: 16px 20px 20px; }
+
+  /* ── REST CARD ── */
+  .rest-card .card-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 36px 20px;
+    gap: 10px;
+  }
+  .rest-icon { font-size: 40px; }
+  .rest-text {
+    font-size: 13px;
+    color: var(--muted);
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  /* ── EXERCISE ROW ── */
+  .exercise-list { display: flex; flex-direction: column; gap: 10px; }
+  .exercise-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    transition: border-color 0.2s;
+  }
+  .exercise-row:hover { border-color: rgba(232,255,71,0.2); }
+
+  .ex-name {
+    font-size: 13.5px;
+    font-weight: 500;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 10px;
+  }
+
+  /* ── SET STEPPER ── */
+  .set-control {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .set-btn {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    width: 30px;
+    height: 30px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, color 0.15s;
+    user-select: none;
+  }
+  .set-btn:hover { background: rgba(232,255,71,0.12); color: var(--accent); }
+  .set-btn:active { background: rgba(232,255,71,0.22); }
+  .set-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+  .set-btn:disabled:hover { background: transparent; color: var(--muted); }
+
+  .set-value {
+    min-width: 32px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    height: 30px;
+    line-height: 30px;
+    letter-spacing: 0.03em;
+  }
+  .set-label {
+    font-size: 10px;
+    color: var(--muted);
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    margin-left: 6px;
+    align-self: center;
+    flex-shrink: 0;
+  }
+
+  /* ── SUMMARY STRIP ── */
+  .summary-strip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .summary-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+  .summary-text span { color: var(--text); font-weight: 600; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 640px) {
+    .inputs-row { grid-template-columns: 1fr 1fr; }
+    .inputs-row .field:nth-child(3) { grid-column: 1 / -1; }
+    .btn-generate { width: 100%; justify-content: center; }
+    .days-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 400px) {
+    .inputs-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-eyebrow">⚡ Smart Training</div>
+  <h1>AI<br/><span>Workout</span><br/>Trainer</h1>
+  <p class="hero-sub">Generate a personalized 7-day split tailored to your goal and level — instantly.</p>
+</div>
+
+<div class="container">
+
+  <!-- CONTROL PANEL -->
+  <div class="panel">
+    <div class="panel-title">Configure your plan</div>
+    <div class="inputs-row">
+      <div class="field">
+        <label for="goal">Fitness Goal</label>
+        <select id="goal">
+          <option value="Weight Loss">Weight Loss</option>
+          <option value="Muscle Gain">Muscle Gain</option>
+          <option value="Strength">Strength</option>
+          <option value="Endurance">Endurance</option>
+          <option value="General Fitness">General Fitness</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="level">Experience Level</label>
+        <select id="level">
+          <option value="Beginner">Beginner</option>
+          <option value="Intermediate">Intermediate</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>&nbsp;</label>
+        <button class="btn-generate" id="generateBtn" onclick="generateWorkout()">Generate Workout</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- WORKOUT OUTPUT -->
+  <div id="workout-output">
+    <div class="section-label" id="plan-label"></div>
+    <div class="days-grid" id="days-grid"></div>
+  </div>
+
+</div>
+
+<script>
+  // ── DATA ────────────────────────────────────────────────────────
+  const EXERCISES = {
+    'Chest & Triceps': [
+      'Push-ups',
+      'Bench Press',
+      'Incline Dumbbell Press',
+      'Tricep Dips',
+    ],
+    'Back & Biceps': [
+      'Pull-ups',
+      'Barbell Rows',
+      'Bicep Curls',
+      'Hammer Curls',
+    ],
+    'Shoulders & Traps': [
+      'Shoulder Press',
+      'Lateral Raises',
+      'Front Raises',
+      'Shrugs',
+    ],
+    'Legs': [
+      'Squats',
+      'Lunges',
+      'Leg Press',
+      'Calf Raises',
+    ],
+  };
+
+  const WEEK_PLAN = [
+    { day: 'Day 1', muscle: 'Chest & Triceps' },
+    { day: 'Day 2', muscle: 'Back & Biceps'   },
+    { day: 'Day 3', muscle: 'Shoulders & Traps' },
+    { day: 'Day 4', muscle: 'Legs'            },
+    { day: 'Day 5', muscle: 'Chest & Triceps' },
+    { day: 'Day 6', muscle: 'Back & Biceps'   },
+    { day: 'Day 7', muscle: 'REST'            },
+  ];
+
+  // Stores sets per day-exercise key: "Day1-PushUps" → 3
+  const setsState = {};
+
+  // ── DEFAULT SETS by goal ──────────────────────────────────────
+  function defaultSets(goal, level) {
+    const base = {
+      'Weight Loss':    3,
+      'Muscle Gain':    4,
+      'Strength':       5,
+      'Endurance':      3,
+      'General Fitness':3,
+    }[goal] || 3;
+    return level === 'Intermediate' ? Math.min(base + 1, 6) : base;
+  }
+
+  // ── KEY helper ────────────────────────────────────────────────
+  function key(dayIdx, exIdx) { return `d${dayIdx}_e${exIdx}`; }
+
+  // ── GENERATE ──────────────────────────────────────────────────
+  function generateWorkout() {
+    const goal  = document.getElementById('goal').value;
+    const level = document.getElementById('level').value;
+    const defSets = defaultSets(goal, level);
+
+    // Reset state
+    Object.keys(setsState).forEach(k => delete setsState[k]);
+
+    // Pre-populate state
+    WEEK_PLAN.forEach((entry, dayIdx) => {
+      if (entry.muscle === 'REST') return;
+      EXERCISES[entry.muscle].forEach((_, exIdx) => {
+        setsState[key(dayIdx, exIdx)] = defSets;
+      });
+    });
+
+    renderGrid(goal, level);
+
+    const output = document.getElementById('workout-output');
+    output.classList.add('visible');
+    output.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ── RENDER GRID ───────────────────────────────────────────────
+  function renderGrid(goal, level) {
+    const label = document.getElementById('plan-label');
+    label.textContent = `${goal} · ${level} · Weekly Split`;
+
+    const grid = document.getElementById('days-grid');
+    grid.innerHTML = '';
+
+    WEEK_PLAN.forEach((entry, dayIdx) => {
+      const card = entry.muscle === 'REST'
+        ? buildRestCard(entry.day)
+        : buildDayCard(entry, dayIdx);
+      grid.appendChild(card);
+    });
+  }
+
+  // ── REST CARD ─────────────────────────────────────────────────
+  function buildRestCard(dayLabel) {
+    const card = document.createElement('div');
+    card.className = 'day-card rest-card';
+    card.innerHTML = `
+      <div class="card-header">
+        <div class="day-badge">${dayLabel}</div>
+        <div class="card-title">Rest Day</div>
+        <div class="muscle-tag rest">Recovery</div>
+      </div>
+      <div class="card-body">
+        <div class="rest-icon">🛌</div>
+        <div class="rest-text">Active recovery — stretch, walk, or sleep in. Your muscles grow when you rest.</div>
+      </div>`;
+    return card;
+  }
+
+  // ── DAY CARD ──────────────────────────────────────────────────
+  function buildDayCard(entry, dayIdx) {
+    const card = document.createElement('div');
+    card.className = 'day-card';
+
+    const exList = EXERCISES[entry.muscle];
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'card-header';
+    header.innerHTML = `
+      <div class="day-badge">${entry.day}</div>
+      <div class="card-title">${entry.muscle}</div>
+      <div class="muscle-tag">${exList.length} exercises</div>`;
+    card.appendChild(header);
+
+    // Body
+    const body = document.createElement('div');
+    body.className = 'card-body';
+
+    const list = document.createElement('div');
+    list.className = 'exercise-list';
+
+    exList.forEach((ex, exIdx) => {
+      const k = key(dayIdx, exIdx);
+      const row = buildExerciseRow(ex, k);
+      list.appendChild(row);
+    });
+
+    body.appendChild(list);
+
+    // Summary strip
+    const summary = document.createElement('div');
+    summary.className = 'summary-strip';
+    summary.id = `summary-${dayIdx}`;
+    updateSummary(summary, dayIdx);
+    body.appendChild(summary);
+
+    card.appendChild(body);
+    return card;
+  }
+
+  // ── EXERCISE ROW ──────────────────────────────────────────────
+  function buildExerciseRow(name, k) {
+    const row = document.createElement('div');
+    row.className = 'exercise-row';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'ex-name';
+    nameEl.textContent = name;
+    row.appendChild(nameEl);
+
+    const ctrl = document.createElement('div');
+    ctrl.className = 'set-control';
+
+    const btnMinus = document.createElement('button');
+    btnMinus.className = 'set-btn';
+    btnMinus.textContent = '−';
+    btnMinus.setAttribute('aria-label', 'Decrease sets');
+
+    const valEl = document.createElement('div');
+    valEl.className = 'set-value';
+    valEl.id = `val-${k}`;
+    valEl.textContent = setsState[k];
+
+    const btnPlus = document.createElement('button');
+    btnPlus.className = 'set-btn';
+    btnPlus.textContent = '+';
+    btnPlus.setAttribute('aria-label', 'Increase sets');
+
+    function refresh() {
+      const v = setsState[k];
+      valEl.textContent = v;
+      btnMinus.disabled = v <= 1;
+      btnPlus.disabled  = v >= 6;
+      // Update summary for this card
+      const [dayPart] = k.split('_');
+      const dayIdx = parseInt(dayPart.replace('d', ''));
+      const summaryEl = document.getElementById(`summary-${dayIdx}`);
+      if (summaryEl) updateSummary(summaryEl, dayIdx);
+    }
+
+    btnMinus.onclick = () => {
+      if (setsState[k] > 1) { setsState[k]--; refresh(); }
+    };
+    btnPlus.onclick = () => {
+      if (setsState[k] < 6) { setsState[k]++; refresh(); }
+    };
+
+    refresh();
+
+    ctrl.appendChild(btnMinus);
+    ctrl.appendChild(valEl);
+    ctrl.appendChild(btnPlus);
+    row.appendChild(ctrl);
+
+    const setLabel = document.createElement('div');
+    setLabel.className = 'set-label';
+    setLabel.textContent = 'sets';
+    row.appendChild(setLabel);
+
+    return row;
+  }
+
+  // ── SUMMARY ───────────────────────────────────────────────────
+  function updateSummary(el, dayIdx) {
+    const keys = Object.keys(setsState).filter(k => k.startsWith(`d${dayIdx}_`));
+    const totalSets = keys.reduce((sum, k) => sum + setsState[k], 0);
+    const exCount = keys.length;
+    el.innerHTML = `
+      <div class="summary-dot"></div>
+      <div class="summary-text"><span>${exCount}</span> exercises · <span>${totalSets}</span> total sets</div>`;
+  }
+</script>
+</body>
+</html>
